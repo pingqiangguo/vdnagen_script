@@ -1,9 +1,14 @@
 #!/miniconda3/envs/py39us/bin/python
 # coding: utf-8
-import os
-from typing import List
-import json
 import argparse
+import json
+import os
+import shlex
+from typing import List
+
+from common import getstatusoutput_s
+from common import sh2bash
+from common import str_md5_get
 
 
 def _stdout_get_xml(stdout: str, tag: str) -> str:
@@ -94,16 +99,19 @@ class FarDBDeleter:
 
         for task in self.tasks:
             print(f"正在删除入库记录: {task.far_path}")
-            from common import str_md5_get, getstatusoutput_s
-            sub_dir = str_md5_get(task.far_path.encode("utf-8"))
+            far_path = task.far_path
+            sub_dir = str_md5_get(far_path.encode("utf-8"))
             sub_cache = os.path.join(self.dbrm_cache, sub_dir)
             os.makedirs(sub_cache, exist_ok=True)
-            delete_xml_path = os.path.join(sub_cache, f"vddb_dna_delete.xml")
+            far_name = os.path.basename(far_path)
+            delete_xml_path = os.path.join(sub_cache, far_name + ".delete-dna.xml")
             if not os.path.isfile(delete_xml_path):
                 delete_xml = template_xml % task.meta_uid
                 with open(delete_xml_path, mode="w", encoding="utf-8") as f:
                     f.write(delete_xml)
-            delete_cmd = f"bash -c \"VDNAGen -s {self.host} -u {self.user} -p {self.passwd} -m \\\"{delete_xml_path}\\\"\""
+            delete_cmd = f"VDNAGen -s {shlex.quote(self.host)} -u {shlex.quote(self.user)} " \
+                         f"-p {shlex.quote(self.passwd)} -m {shlex.quote(delete_xml_path)}"
+            delete_cmd = sh2bash(delete_cmd)
             print(f"执行命令: {delete_cmd}")
             task.delete_cmd = delete_cmd
             sts, stdout = getstatusoutput_s(delete_cmd)

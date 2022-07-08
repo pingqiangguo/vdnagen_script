@@ -1,25 +1,25 @@
 #!/miniconda3/envs/py39us/bin/python
 # coding: utf-8
-"""
-2. 查询比对脚本 （与上次测试使用的脚本的功能相同）
-
-输入：样本基因的目录名
-功能描述：对指定目录下的所有样本基因（包括子目录），进行比对查询。
-输出：统计报表，包含下面的字段，
-基因文件路径，查询开始时间，查询结束时间，查询返回代码，查询任务ID，匹配数量，匹配母本的标题，匹配母本的ID，样本的偏移量，母本的偏移量，匹配时长，匹配置信度
-"""
-from copy import deepcopy
 import argparse
 import json
 import os
-import pandas as pd
+import shlex
 import time
 from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
 from enum import IntEnum
 from typing import List
 
+import pandas as pd
+
+from common import far_is_video_far
+from common import far_video_duration_get
+from common import getstatusoutput_s
+from common import real_time_get
+from common import sh2bash
 from common import stdout_get_json
-from common import str_md5_get, time_now_get, far_video_duration_get, far_is_video_far, getstatusoutput_s, real_time_get
+from common import str_md5_get
+from common import time_now_get
 
 backup = os.path.join(os.getcwd(), "backup")
 log_filename = "batch_far_match.log"
@@ -328,7 +328,10 @@ class FarMatcher:
         if not vdnagen_rematch and os.path.isfile(task_dump_path):
             task.load(task_dump_path)
         if task.status != TaskStatus.match_done:
-            match_cmd = f"bash -c \"time python2 {os.path.dirname(__file__)}/FarQuerySampleCode.py -s {self.host} -u {self.user} -p {self.passwd} -i \\\"{far_path}\\\"\""
+            match_cmd = f"time python2 {shlex.quote(os.path.join(os.path.dirname(__file__), 'FarQuerySampleCode.py'))} " \
+                        f"-s {shlex.quote(self.host)} -u {shlex.quote(self.user)} -p {shlex.quote(self.passwd)}" \
+                        f" -i {shlex.quote(far_path)}"
+            match_cmd = sh2bash(match_cmd)
             task.match_cmd = match_cmd
             time_begin = time_now_get()
             status, output = getstatusoutput_s(match_cmd)
@@ -478,7 +481,7 @@ class FarMatcher:
         self.reporter.log_write(f"{self.num_workers} thread to running {len(self.tasks)} task done.")
 
 
-def batch_far_match(host, user, passwd, input, num_workers):
+def batch_far_match(host: str, user: str, passwd: str, input: str, num_workers: int):
     fm = FarMatcher(host, user, passwd, num_workers)
     if os.path.isfile(input):
         fm.tasks_add_from_file(input)
@@ -489,10 +492,10 @@ def batch_far_match(host, user, passwd, input, num_workers):
 
 def parse_args():
     parser = argparse.ArgumentParser(prog="python3 BatchFarMatch.py", description="批量far文件vddb查询")
-    parser.add_argument("-s", "--host", type=str, help="VDDB服务地址")
-    parser.add_argument("-u", "--user", type=str, help="VDDB用户名称")
-    parser.add_argument("-p", "--password", type=str, help="VDDB用户密码")
-    parser.add_argument("-i", "--input_dir", type=str, help="输入far文件路径")
+    parser.add_argument("-s", "--host", type=str, required=True, help="VDDB服务地址")
+    parser.add_argument("-u", "--user", type=str, required=True, help="VDDB用户名称")
+    parser.add_argument("-p", "--password", type=str, required=True, help="VDDB用户密码")
+    parser.add_argument("-i", "--input", type=str, required=True, help="far文件路径信息")
     parser.add_argument("--num_workers", default=1, type=int, required=False, help="工作线程数")
     return parser.parse_args()
 
@@ -506,7 +509,7 @@ def main():
     # if len(std[0].decode().split()) > 1:
     #     exit('Already running')
 
-    batch_far_match(args.host, args.user, args.password, args.input_dir, args.num_workers)
+    batch_far_match(args.host, args.user, args.password, args.input, args.num_workers)
 
 
 if __name__ == '__main__':

@@ -2,8 +2,10 @@
 # pip install xmltodict
 import json
 import os
+import shlex
 import subprocess
 from typing import Optional, Tuple
+from common import sh2bash
 
 import xmltodict
 
@@ -115,7 +117,7 @@ class VDNAGen:
             res["rebuild"] = 0
         else:
             res["rebuild"] = 1
-            shell_cmd = f"VDNAGen -o '{far_path}' '{movie_path}'"
+            shell_cmd = sh2bash(f"VDNAGen -o {shlex.quote(far_path)} {shlex.quote(movie_path)}")
             res["shell_cmd"] = shell_cmd
             status, stdout = _shell_run(shell_cmd)
             res["exit_code"] = status
@@ -141,7 +143,8 @@ class VDNAGen:
             rename_xml = template_xml % (meta_uid, dna_name)
             with open("rename_dna.xml", mode="w", encoding="utf-8") as f:
                 f.write(rename_xml)
-            shell_cmd = f"VDNAGen -s {self.__host} -u {self.__user} -p {self.__passwd} -m rename_dna.xml"
+            shell_cmd = f"VDNAGen -s {shlex.quote(self.__host)} -u {shlex.quote(self.__user)} -p {shlex.quote(self.__passwd)} -m rename_dna.xml"
+            shell_cmd = sh2bash(shell_cmd)
             res["shell_cmd"] = shell_cmd
             status, stdout = _shell_run(shell_cmd)
             res["exit_code"] = status
@@ -173,7 +176,8 @@ class VDNAGen:
             delete_xml = template_xml % meta_uid
             with open("delete_dna.xml", mode="w", encoding="utf-8") as f:
                 f.write(delete_xml)
-            shell_cmd = f"VDNAGen -s {self.__host} -u {self.__user} -p {self.__passwd} -m delete_dna.xml"
+            shell_cmd = f"VDNAGen -s {shlex.quote(self.__host)} -u {shlex.quote(self.__user)} -p {shlex.quote(self.__passwd)} -m delete_dna.xml"
+            shell_cmd = sh2bash(shell_cmd)
             res["shell_cmd"] = shell_cmd
             status, stdout = _shell_run(shell_cmd)
             res["exit_code"] = status
@@ -193,7 +197,8 @@ class VDNAGen:
         """
         res = {"mode": "far_db_insert"}
         if self.__config_check():
-            shell_cmd = f"VDNAGen -s {self.__host} -u {self.__user} -p {self.__passwd} \"{far_path}\""
+            shell_cmd = f"VDNAGen -s {shlex.quote(self.__host)} -u {shlex.quote(self.__user)} -p {shlex.quote(self.__passwd)} {shlex.quote(far_path)}"
+            shell_cmd = sh2bash(shell_cmd)
             res["shell_cmd"] = shell_cmd
             status, stdout = _shell_run(shell_cmd)
             res["exit_code"] = status
@@ -211,7 +216,10 @@ class VDNAGen:
         :return:
         """
         res = {"mode": "far_db_match"}
-        shell_cmd = f"python2 FarQuerySampleCode.py -s {self.__host} -u {self.__user} -p {self.__passwd} -i \"{far_path}\""
+        shell_cmd = f"python2 FarQuerySampleCode.py -s " \
+                    f"{shlex.quote(self.__host)} -u {shlex.quote(self.__user)} " \
+                    f"-p {shlex.quote(self.__passwd)} -i {shlex.quote(far_path)}"
+        shell_cmd = sh2bash(shell_cmd)
         res["shell_cmd"] = shell_cmd
         status, stdout = _shell_run(shell_cmd)
         res["exit_code"] = status

@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import shlex
 import time
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
@@ -11,7 +12,13 @@ from typing import List
 
 import pandas as pd
 
-from common import getstatusoutput_s, video_duration_get, time_now_get, file_size_format, str_md5_get, user_time_get
+from common import file_size_format
+from common import getstatusoutput_s
+from common import sh2bash
+from common import str_md5_get
+from common import time_now_get
+from common import user_time_get
+from common import video_duration_get
 
 # =================
 
@@ -36,28 +43,15 @@ ffmpeg_devices = [
 ]
 
 ffmpeg_shell_tpl = [
-    "bash -c \"time ffmpeg -i \\\"{src}\\\" -s 400:244 \\\"{dst}\\\"\"",
-    "bash -c \"time /root/ffmpeg.N-107154-gc11fb46731 -hwaccel_device {gpu_id} -hwaccel cuvid -c:v {codec}_cuvid -i \\\"{src}\\\"  -c:v h264_nvenc -vf scale_npp=400:-2 -y \\\"{dst}\\\"\""
+    "time ffmpeg -i {src} -s 400:244 {dst}",
+    "time /root/ffmpeg.N-107154-gc11fb46731 -hwaccel_device {gpu_id} -hwaccel cuvid -c:v {codec}_cuvid -i {src} -c:v h264_nvenc -vf scale_npp=400:-2 -y {dst}"
 ]
 
 ffmpeg_rebuild = True
 vdnagen_rebuild = True
 
 
-# ffmpeg_rebuild = False
-# vdnagen_rebuild = False
-
-
 # =================
-
-
-# def _is_media_suffix(media_path: str) -> bool:
-#     bn, suf = os.path.splitext(media_path)
-#     if len(suf) > 0:
-#         suf = suf.lower()
-#         return suf in {".asf", ".avi", ".flv", ".f4v", ".mkv", ".mov", ".mpeg", ".mpg", ".mp4", ".rm", ".rmvb",
-#                        ".ts", ".3gp"}
-#     return False
 
 
 class Reporter:
@@ -107,11 +101,11 @@ class Reporter:
 
 
 class MediaInfo:
-    __cmd_tpl = "ffprobe \"{media_path}\" -show_streams -select_streams v -print_format json"
+    __cmd_tpl = "ffprobe {media_path} -show_streams -select_streams v -print_format json"
 
     def __init__(self, media_path: str):
         self.media_path = media_path
-        self.__cmd = self.__cmd_tpl.format(media_path=media_path)
+        self.__cmd = sh2bash(self.__cmd_tpl.format(media_path=shlex.quote(media_path)))
 
         self.__sts = -1
         self.__data = ""
@@ -363,10 +357,11 @@ class FarCreater:
         # 判断使用什么方式进行压缩 -1 CPU <=1 GPU
         if gpu_id < 0:
             tpl = ffmpeg_shell_tpl[0]
-            cmd = tpl.format(src=media_path, dst=compress_path)
+            cmd = sh2bash(tpl.format(src=shlex.quote(media_path), dst=shlex.quote(compress_path)))
         else:
             tpl = ffmpeg_shell_tpl[1]
-            cmd = tpl.format(src=media_path, dst=compress_path, gpu_id=gpu_id, codec=codec)
+            cmd = sh2bash(
+                tpl.format(src=shlex.quote(media_path), dst=shlex.quote(compress_path), gpu_id=gpu_id, codec=codec))
         task.compress_cmd = cmd
 
         if ffmpeg_rebuild and os.path.isfile(compress_path):
@@ -472,8 +467,7 @@ class FarCreater:
 
         far_path = task.far_path
         task.status = TaskStatus.dnagen_runing
-
-        cmd = f"bash -c \"time VDNAGen \\\"{media_path}\\\" -o \\\"{far_path}\\\"\""
+        cmd = sh2bash(f"time VDNAGen {shlex.quote(media_path)} -o {shlex.quote(far_path)}")
         task.vdg_cmd = cmd
 
         if vdnagen_rebuild and os.path.isfile(far_path):
@@ -774,7 +768,7 @@ def parse_args():
     :return:
     """
     parser = argparse.ArgumentParser(prog="./BatchFarCreate.py", description="批量视频far文件生成")
-    parser.add_argument("-i", "--input_dir", type=str, required=True, help="源视频文件路径")
+    parser.add_argument("-i", "--input", type=str, required=True, help="源视频文件路径信息")
     parser.add_argument("-o", "--output_dir", type=str, required=True, help="far文件保存路径")
     parser.add_argument("--cache", type=str, default="/tmp/cache", required=False, help="中间缓存路径")
     parser.add_argument("--num_workers", default=int(os.cpu_count() / 1.5) + 1, type=int, required=False, help="工作线程数")
@@ -791,7 +785,7 @@ def main():
     #     exit('Already running')
 
     time_begin = time.time()
-    batch_far_create(args.input_dir, args.output_dir, args.num_workers, args.cache)
+    batch_far_create(args.input, args.output_dir, args.num_workers, args.cache)
     time_end = time.time()
     print(f"总共用时: {time_end - time_begin:.3f}s")
 
