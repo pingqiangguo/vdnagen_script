@@ -1,5 +1,6 @@
 #!/miniconda3/envs/py39us/bin/python
 # coding: utf-8
+import time
 import argparse
 import json
 import os
@@ -11,21 +12,6 @@ from common import sh2bash
 from common import str_md5_get
 
 
-def _stdout_get_xml(stdout: str, tag: str) -> str:
-    """
-    从stdout从提取xml信息
-    :param stdout:
-    :param tag:
-    :return:
-    """
-    start_tag = f"<{tag}>"
-    end_tag = f"</{tag}>"
-    res = ""
-    if start_tag in stdout and end_tag in stdout:
-        res = stdout[stdout.find(start_tag): stdout.find(end_tag) + len(end_tag)]
-    return res
-
-
 class Task:
     def __init__(self):
         self.far_path = ""
@@ -35,13 +21,13 @@ class Task:
 
 class FarDBDeleter:
     def __init__(self, host, user, passwd, dbrm_cache="/tmp/far_db_remove"):
-        self.host = host
-        self.user = user
-        self.passwd = passwd
+        self.__host = host
+        self.__user = user
+        self.__passwd = passwd
 
-        self.dbrm_cache = dbrm_cache
+        self.__dbrm_cache = dbrm_cache
         os.makedirs(dbrm_cache, exist_ok=True)
-        self.tasks: List[Task] = []
+        self.__tasks: List[Task] = []
 
     def task_add(self, far_path: str):
         if not os.path.isfile(far_path):
@@ -65,7 +51,7 @@ class FarDBDeleter:
 
         task.far_path = far_path
         task.meta_uid = meta_uid
-        self.tasks.append(task)
+        self.__tasks.append(task)
 
     def tasks_add_from_dir(self, far_dir: str) -> None:
         for sub in os.listdir(far_dir):
@@ -97,11 +83,11 @@ class FarDBDeleter:
 </Media_Meta>
                 """.strip()
 
-        for task in self.tasks:
+        for task in self.__tasks:
             print(f"正在删除入库记录: {task.far_path}")
             far_path = task.far_path
             sub_dir = str_md5_get(far_path.encode("utf-8"))
-            sub_cache = os.path.join(self.dbrm_cache, sub_dir)
+            sub_cache = os.path.join(self.__dbrm_cache, sub_dir)
             os.makedirs(sub_cache, exist_ok=True)
             far_name = os.path.basename(far_path)
             delete_xml_path = os.path.join(sub_cache, far_name + ".delete-dna.xml")
@@ -109,8 +95,8 @@ class FarDBDeleter:
                 delete_xml = template_xml % task.meta_uid
                 with open(delete_xml_path, mode="w", encoding="utf-8") as f:
                     f.write(delete_xml)
-            delete_cmd = f"VDNAGen -s {shlex.quote(self.host)} -u {shlex.quote(self.user)} " \
-                         f"-p {shlex.quote(self.passwd)} -m {shlex.quote(delete_xml_path)}"
+            delete_cmd = f"VDNAGen -s {shlex.quote(self.__host)} -u {shlex.quote(self.__user)} " \
+                         f"-p {shlex.quote(self.__passwd)} -m {shlex.quote(delete_xml_path)}"
             delete_cmd = sh2bash(delete_cmd)
             print(f"执行命令: {delete_cmd}")
             task.delete_cmd = delete_cmd
@@ -150,7 +136,10 @@ def main():
     # if len(std[0].decode().split()) > 1:
     #     exit('Already running')
 
+    time_begin = time.time()
     batch_far_remove(args.host, args.user, args.password, args.input)
+    time_end = time.time()
+    print(f"总共用时: {time_end - time_begin:.3f}s")
 
 
 if __name__ == '__main__':

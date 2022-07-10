@@ -222,7 +222,7 @@ def far_video_duration_get(far_path: str, cache: str = "./far_split.d"):
     return duration
 
 
-def stdout_get_json(stdout: str) -> str:
+def mediawise_stdout_get_json(stdout: str) -> str:
     """
     从stdout从提取json信息
     :param stdout:
@@ -241,4 +241,19 @@ def stdout_get_json(stdout: str) -> str:
                 end_idx = i
                 break
         res = stdout[start_idx:end_idx]
+    return res
+
+
+def vdnagen_stdout_get_xml(stdout: str, tag: str) -> str:
+    """
+    从stdout从提取xml信息
+    :param stdout:
+    :param tag:
+    :return:
+    """
+    start_tag = f"<{tag}>"
+    end_tag = f"</{tag}>"
+    res = ""
+    if start_tag in stdout and end_tag in stdout:
+        res = stdout[stdout.find(start_tag): stdout.find(end_tag) + len(end_tag)]
     return res

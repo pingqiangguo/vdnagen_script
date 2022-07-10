@@ -17,7 +17,7 @@ from common import far_video_duration_get
 from common import getstatusoutput_s
 from common import real_time_get
 from common import sh2bash
-from common import stdout_get_json
+from common import mediawise_stdout_get_json
 from common import str_md5_get
 from common import time_now_get
 
@@ -159,28 +159,28 @@ class FarMatcher:
     reporter = Reporter()
 
     def __init__(self, host: str, user: str, passwd: str, num_workers: int = 40, match_cache: str = "/tmp/far_match"):
-        self.host = host
-        self.user = user
-        self.passwd = passwd
+        self.__host = host
+        self.__user = user
+        self.__passwd = passwd
 
         os.makedirs(match_cache, exist_ok=True)
         self.match_cache = match_cache
-        self.tasks: List[Task] = []
-        self.tasks_init_error: List[Task] = []
+        self.__tasks: List[Task] = []
+        self.__tasks_init_error: List[Task] = []
 
-        self.num_workers = 1
+        self.__num_workers = 1
         if num_workers > 1:
-            self.num_workers = num_workers
+            self.__num_workers = num_workers
 
-        self.match_pools = ThreadPoolExecutor(max_workers=self.num_workers)
-        self.match_tasks_wait: List[int] = []  # match 还没开始运行的
-        self.match_tasks_running: List[int] = []  # match 正在运行的
-        self.match_tasks_done: List[int] = []  # match 已经运行结束的
-        self.match_tasks_error: List[int] = []  # match 运行出错的任务
+        self.__match_pools = ThreadPoolExecutor(max_workers=self.__num_workers)
+        self.__match_tasks_wait: List[int] = []  # match 还没开始运行的
+        self.__match_tasks_running: List[int] = []  # match 正在运行的
+        self.__match_tasks_done: List[int] = []  # match 已经运行结束的
+        self.__match_tasks_error: List[int] = []  # match 运行出错的任务
 
         # match 结果查询的控制变量
-        self.match_tasks_done_tr: int = 0  # match 已经运行结束的 上次遍历结束的位置
-        self.match_tasks_error_tr: int = 0  # match 运行错误的 上次遍历结束的位置
+        self.__match_tasks_done_tr: int = 0  # match 已经运行结束的 上次遍历结束的位置
+        self.__match_tasks_error_tr: int = 0  # match 运行错误的 上次遍历结束的位置
 
     def task_add(self, far_path: str) -> None:
         far_path = os.path.abspath(far_path)
@@ -196,15 +196,15 @@ class FarMatcher:
                     self.reporter.far_path_write(far_path)
                     task.media_duration = far_video_duration_get(far_path, cache_dir)
                     task.status = TaskStatus.task_create
-                    self.tasks.append(task)
+                    self.__tasks.append(task)
                 else:
                     self.reporter.log_write(f"{far_path} not support.")
                     task.status = TaskStatus.no_need_match
-                    self.tasks_init_error.append(task)
+                    self.__tasks_init_error.append(task)
             except:
                 self.reporter.log_write(f"{far_path} parse error.")
                 task.status = TaskStatus.parse_error
-                self.tasks_init_error.append(task)
+                self.__tasks_init_error.append(task)
         else:
             self.reporter.log_write(f"{far_path} not found or suffix error, ignored.")
 
@@ -226,21 +226,21 @@ class FarMatcher:
                 far_path = far_path.strip()
                 self.task_add(far_path)
 
-    def tasks_init(self):
+    def __tasks_init(self):
 
-        self.match_tasks_wait = []
-        self.match_tasks_done = []
-        self.match_tasks_running = []
-        self.match_tasks_error = []
+        self.__match_tasks_wait = []
+        self.__match_tasks_done = []
+        self.__match_tasks_running = []
+        self.__match_tasks_error = []
 
-        self.match_tasks_done_tr = 0
-        self.match_tasks_error_tr = 0
+        self.__match_tasks_done_tr = 0
+        self.__match_tasks_error_tr = 0
 
-        self.match_tasks_wait = [*range(len(self.tasks))]
+        self.__match_tasks_wait = [*range(len(self.__tasks))]
 
-    def request_parse(self, task_id: int):
-        if 0 <= task_id < len(self.tasks):
-            task: Task = self.tasks[task_id]
+    def __request_parse(self, task_id: int):
+        if 0 <= task_id < len(self.__tasks):
+            task: Task = self.__tasks[task_id]
         else:
             return
         request = task.request
@@ -313,9 +313,9 @@ class FarMatcher:
                 task.sample_off.append(sample_offset)
                 task.ref_off.append(reference_offset)
 
-    def match_runner(self, task_id: int):
-        if 0 <= task_id < len(self.tasks):
-            task: Task = self.tasks[task_id]
+    def __match_runner(self, task_id: int):
+        if 0 <= task_id < len(self.__tasks):
+            task: Task = self.__tasks[task_id]
         else:
             return
 
@@ -332,7 +332,7 @@ class FarMatcher:
             task.load(task_dump_path)
         if task.status != TaskStatus.match_done:
             match_cmd = f"time python2 {shlex.quote(os.path.join(os.path.dirname(__file__), 'FarQuerySampleCode.py'))} " \
-                        f"-s {shlex.quote(self.host)} -u {shlex.quote(self.user)} -p {shlex.quote(self.passwd)}" \
+                        f"-s {shlex.quote(self.__host)} -u {shlex.quote(self.__user)} -p {shlex.quote(self.__passwd)}" \
                         f" -i {shlex.quote(far_path)}"
             match_cmd = sh2bash(match_cmd)
             task.match_cmd = match_cmd
@@ -342,54 +342,54 @@ class FarMatcher:
             task.match_start_time = time_begin
             task.match_end_time = time_end
             task.match_time_used = real_time_get(output)
-            request = stdout_get_json(output)
+            request = mediawise_stdout_get_json(output)
             if len(request) == 0:
                 task.status = TaskStatus.match_error
                 task.request = output
                 return
             request = json.loads(request)
             task.request = request
-            self.request_parse(task_id)
+            self.__request_parse(task_id)
             task.status = TaskStatus.match_done
             task.dump(task_dump_path)
 
-    def match_tasks_queue_update(self):
+    def __match_tasks_queue_update(self):
         # 统计已经完成的任务
         tasks = []
-        for task_id in self.match_tasks_running:
-            task: Task = self.tasks[task_id]
+        for task_id in self.__match_tasks_running:
+            task: Task = self.__tasks[task_id]
             task_proc = task.match_task_proc
             if task_proc.done():
                 tasks.append(task_id)
 
         # 删除已经完成的任务
         for task_id in tasks:
-            self.match_tasks_running.remove(task_id)
-            task: Task = self.tasks[task_id]
+            self.__match_tasks_running.remove(task_id)
+            task: Task = self.__tasks[task_id]
             if task.status == TaskStatus.match_done:
-                self.match_tasks_done.append(task_id)
+                self.__match_tasks_done.append(task_id)
             else:
-                self.match_tasks_error.append(task_id)
+                self.__match_tasks_error.append(task_id)
 
         # 获得新任务
         tasks = []
-        for task_id in self.match_tasks_wait:
-            if len(tasks) + len(self.match_tasks_running) >= self.num_workers:
+        for task_id in self.__match_tasks_wait:
+            if len(tasks) + len(self.__match_tasks_running) >= self.__num_workers:
                 break
             tasks.append(task_id)
 
         # 启动新任务
         for task_id in tasks:
-            task: Task = self.tasks[task_id]
+            task: Task = self.__tasks[task_id]
             task.status = TaskStatus.need_match
-            task_proc = self.match_pools.submit(self.match_runner, task_id)
+            task_proc = self.__match_pools.submit(self.__match_runner, task_id)
             task.match_task_proc = task_proc
-            self.match_tasks_running.append(task_id)
-            self.match_tasks_wait.remove(task_id)
+            self.__match_tasks_running.append(task_id)
+            self.__match_tasks_wait.remove(task_id)
 
-    def match_task_log_update_op(self, task_id: int):
-        if 0 <= task_id <= len(self.tasks):
-            task: Task = self.tasks[task_id]
+    def __match_task_log_update_op(self, task_id: int):
+        if 0 <= task_id <= len(self.__tasks):
+            task: Task = self.__tasks[task_id]
         else:
             return
         self.reporter.log_write(f"far path: {task.far_path}")
@@ -413,22 +413,22 @@ class FarMatcher:
             self.reporter.log_write(f"\tmatch duration duration: {task.match_duration[i]}")
             self.reporter.log_write(f"\tmatch likelihood: {task.likelihood[i]}")
 
-    def match_task_log_update(self):
-        for i in range(len(self.match_tasks_done) - self.match_tasks_done_tr):
+    def __match_task_log_update(self):
+        for i in range(len(self.__match_tasks_done) - self.__match_tasks_done_tr):
             self.reporter.log_write(
-                f"=============== Success VDNAGen task {self.match_tasks_done_tr + i + 1} ===============")
-            task_id = self.match_tasks_done[self.match_tasks_done_tr + i]
-            self.match_task_log_update_op(task_id)
+                f"=============== Success VDNAGen task {self.__match_tasks_done_tr + i + 1} ===============")
+            task_id = self.__match_tasks_done[self.__match_tasks_done_tr + i]
+            self.__match_task_log_update_op(task_id)
 
-        self.match_tasks_done_tr = len(self.match_tasks_done)
-        for i in range(len(self.match_tasks_error) - self.match_tasks_error_tr):
+        self.__match_tasks_done_tr = len(self.__match_tasks_done)
+        for i in range(len(self.__match_tasks_error) - self.__match_tasks_error_tr):
             self.reporter.log_write(
-                f"=============== Success VDNAGen task {self.match_tasks_error_tr + i + 1} ===============")
-            task_id = self.match_tasks_done[self.match_tasks_error_tr + i]
-            self.match_task_log_update_op(task_id)
-        self.match_tasks_error_tr = len(self.match_tasks_error)
+                f"=============== Success VDNAGen task {self.__match_tasks_error_tr + i + 1} ===============")
+            task_id = self.__match_tasks_done[self.__match_tasks_error_tr + i]
+            self.__match_task_log_update_op(task_id)
+        self.__match_tasks_error_tr = len(self.__match_tasks_error)
 
-    def tasks_report_export(self):
+    def __tasks_report_export(self):
         tpl = {
             # 文件信息
             "far_path": "",  # far文件路径
@@ -449,7 +449,7 @@ class FarMatcher:
             "Likelihood": ""  # 匹配的相似度
         }
         res = []
-        for task in self.tasks:
+        for task in self.__tasks:
             report = deepcopy(tpl)
             report["far_path"] = task.far_path
             report["media_duration(s)"] = task.media_duration
@@ -478,13 +478,13 @@ class FarMatcher:
         self.reporter.xlsx_write(res)
 
     def tasks_run(self):
-        self.tasks_init()
-        self.reporter.log_write(f"start {self.num_workers} thread to running {len(self.tasks)} task...")
-        while len(self.match_tasks_wait) + len(self.match_tasks_running) > 0:
-            self.match_tasks_queue_update()
-            self.match_task_log_update()
-        self.tasks_report_export()
-        self.reporter.log_write(f"{self.num_workers} thread to running {len(self.tasks)} task done.")
+        self.__tasks_init()
+        self.reporter.log_write(f"start {self.__num_workers} thread to running {len(self.__tasks)} task...")
+        while len(self.__match_tasks_wait) + len(self.__match_tasks_running) > 0:
+            self.__match_tasks_queue_update()
+            self.__match_task_log_update()
+        self.__tasks_report_export()
+        self.reporter.log_write(f"{self.__num_workers} thread to running {len(self.__tasks)} task done.")
 
 
 def batch_far_match(host: str, user: str, passwd: str, input: str, num_workers: int):
@@ -515,7 +515,10 @@ def main():
     # if len(std[0].decode().split()) > 1:
     #     exit('Already running')
 
+    time_begin = time.time()
     batch_far_match(args.host, args.user, args.password, args.input, args.num_workers)
+    time_end = time.time()
+    print(f"总共用时: {time_end - time_begin:.3f}s")
 
 
 if __name__ == '__main__':
