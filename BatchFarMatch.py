@@ -20,6 +20,7 @@ from common import sh2bash
 from common import mediawise_stdout_get_json
 from common import str_md5_get
 from common import time_now_get
+from common import symlink_real_path
 
 backup = os.path.join(os.getcwd(), "backup")
 log_filename = "batch_far_match.log"
@@ -331,7 +332,7 @@ class FarMatcher:
         if not vdnagen_rematch and os.path.isfile(task_dump_path):
             task.load(task_dump_path)
         if task.status != TaskStatus.match_done:
-            match_cmd = f"time python2 {shlex.quote(os.path.join(os.path.dirname(__file__), 'FarQuerySampleCode.py'))} " \
+            match_cmd = f"time python2 {shlex.quote(os.path.join(os.path.dirname(symlink_real_path(__file__)), 'FarQuerySampleCode.py'))} " \
                         f"-s {self.__host} -u {self.__user} -p {self.__passwd}" \
                         f" -i {shlex.quote(far_path)}"
             match_cmd = sh2bash(match_cmd)

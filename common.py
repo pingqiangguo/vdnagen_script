@@ -8,6 +8,13 @@ import time
 from typing import Tuple
 
 
+def symlink_real_path(path: str):
+    res = path
+    if os.path.islink(path):
+        res = os.readlink(path)
+    return res
+
+
 def sh2bash(cmd: str) -> str:
     return "bash -c {sh}".format(sh=shlex.quote(cmd))
 
