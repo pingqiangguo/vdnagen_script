@@ -332,7 +332,7 @@ class FarMatcher:
             task.load(task_dump_path)
         if task.status != TaskStatus.match_done:
             match_cmd = f"time python2 {shlex.quote(os.path.join(os.path.dirname(__file__), 'FarQuerySampleCode.py'))} " \
-                        f"-s {shlex.quote(self.__host)} -u {shlex.quote(self.__user)} -p {shlex.quote(self.__passwd)}" \
+                        f"-s {self.__host} -u {self.__user} -p {self.__passwd}" \
                         f" -i {shlex.quote(far_path)}"
             match_cmd = sh2bash(match_cmd)
             task.match_cmd = match_cmd
