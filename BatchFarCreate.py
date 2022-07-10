@@ -740,7 +740,7 @@ class FarCreater:
             self.__fpg_tasks_log_update()
             self.__vdg_tasks_queue_update()
             self.__vdg_tasks_log_update()
-            time.sleep(0.02)
+            time.sleep(1)
         self.__reporter.log_write(f"{self.__num_workers} thread to running {len(self.__tasks)} task done.")
         self.__tasks_report_export()
 
@@ -779,10 +779,10 @@ def main():
     args = parse_args()
 
     # 进程重复启动检测
-    # proc = subprocess.Popen(["pgrep", "-f", __file__], stdout=subprocess.PIPE)
-    # std = [p for p in proc.communicate() if p is not None]
-    # if len(std[0].decode().split()) > 1:
-    #     exit('Already running')
+    proc = subprocess.Popen(["pgrep", "-f", __file__], stdout=subprocess.PIPE)
+    std = [p for p in proc.communicate() if p is not None]
+    if len(std[0].decode().split()) > 1:
+        exit('Already running')
 
     time_begin = time.time()
     batch_far_create(args.input, args.output_dir, args.num_workers, args.cache)

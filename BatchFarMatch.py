@@ -416,15 +416,15 @@ class FarMatcher:
     def __match_task_log_update(self):
         for i in range(len(self.__match_tasks_done) - self.__match_tasks_done_tr):
             self.reporter.log_write(
-                f"=============== Success VDNAGen task {self.__match_tasks_done_tr + i + 1} ===============")
+                f"=============== Success Match task {self.__match_tasks_done_tr + i + 1} ===============")
             task_id = self.__match_tasks_done[self.__match_tasks_done_tr + i]
             self.__match_task_log_update_op(task_id)
 
         self.__match_tasks_done_tr = len(self.__match_tasks_done)
         for i in range(len(self.__match_tasks_error) - self.__match_tasks_error_tr):
             self.reporter.log_write(
-                f"=============== Success VDNAGen task {self.__match_tasks_error_tr + i + 1} ===============")
-            task_id = self.__match_tasks_done[self.__match_tasks_error_tr + i]
+                f"=============== Error Match task {self.__match_tasks_error_tr + i + 1} ===============")
+            task_id = self.__match_tasks_error[self.__match_tasks_error_tr + i]
             self.__match_task_log_update_op(task_id)
         self.__match_tasks_error_tr = len(self.__match_tasks_error)
 
@@ -483,6 +483,7 @@ class FarMatcher:
         while len(self.__match_tasks_wait) + len(self.__match_tasks_running) > 0:
             self.__match_tasks_queue_update()
             self.__match_task_log_update()
+            time.sleep(1)
         self.__tasks_report_export()
         self.reporter.log_write(f"{self.__num_workers} thread to running {len(self.__tasks)} task done.")
 
@@ -510,10 +511,10 @@ def main():
     args = parse_args()
 
     # 进程重复启动检测
-    # proc = subprocess.Popen(["pgrep", "-f", __file__], stdout=subprocess.PIPE)
-    # std = [p for p in proc.communicate() if p is not None]
-    # if len(std[0].decode().split()) > 1:
-    #     exit('Already running')
+    proc = subprocess.Popen(["pgrep", "-f", __file__], stdout=subprocess.PIPE)
+    std = [p for p in proc.communicate() if p is not None]
+    if len(std[0].decode().split()) > 1:
+        exit('Already running')
 
     time_begin = time.time()
     batch_far_match(args.host, args.user, args.password, args.input, args.num_workers)
