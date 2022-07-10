@@ -93,6 +93,7 @@ def main():
     passwd = args.password
 
     # 进程重复启动检测
+    import subprocess
     proc = subprocess.Popen(["pgrep", "-f", __file__], stdout=subprocess.PIPE)
     std = [p for p in proc.communicate() if p is not None]
     if len(std[0].decode().split()) > 1:
