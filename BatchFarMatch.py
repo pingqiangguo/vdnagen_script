@@ -26,7 +26,10 @@ log_filename = "batch_far_match.log"
 far_path_report = "batch_far_match_far_path.txt"
 xlsx_export = "batch_far_match_report.xlsx"
 
-vdnagen_rematch = False
+# 使用上次查询结果
+# vdnagen_rematch = False
+# 重新查询
+vdnagen_rematch = True
 
 
 class Reporter:
@@ -459,6 +462,9 @@ class FarMatcher:
                 continue
             report["error"] = "0(Success)"
             report["match_count"] = task.match_count
+            if task.match_count == 0:
+                res.append(report)
+                continue
             for match_idx in range(task.match_count):
                 report_match_item = deepcopy(report)
                 report_match_item["Title"] = task.title[match_idx]
