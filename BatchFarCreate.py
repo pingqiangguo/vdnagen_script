@@ -26,8 +26,8 @@ from common import video_duration_get
 
 backup = os.path.join(os.getcwd(), "backup")
 log_filename = "batch_far_create.log"
-xlsx_export = "far_create_report.xlsx"
-path_report = "far_path_report.txt"
+xlsx_export = "batch_far_create_report.xlsx"
+path_report = "batch_far_create_path_report.txt"
 
 # 设备相关配置
 # compress_threshold = 1

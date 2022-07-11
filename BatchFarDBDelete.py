@@ -91,10 +91,9 @@ class FarDBDeleter:
             os.makedirs(sub_cache, exist_ok=True)
             far_name = os.path.basename(far_path)
             delete_xml_path = os.path.join(sub_cache, far_name + ".delete-dna.xml")
-            if not os.path.isfile(delete_xml_path):
-                delete_xml = template_xml % task.meta_uid
-                with open(delete_xml_path, mode="w", encoding="utf-8") as f:
-                    f.write(delete_xml)
+            delete_xml = template_xml % task.meta_uid
+            with open(delete_xml_path, mode="w", encoding="utf-8") as f:
+                f.write(delete_xml)
             delete_cmd = f"VDNAGen -s {shlex.quote(self.__host)} -u {shlex.quote(self.__user)} " \
                          f"-p {shlex.quote(self.__passwd)} -m {shlex.quote(delete_xml_path)}"
             delete_cmd = sh2bash(delete_cmd)
