@@ -18,6 +18,7 @@ from common import sh2bash
 from common import str_md5_get
 from common import time_now_get
 from common import user_time_get
+from common import real_time_get
 from common import video_duration_get
 
 # =================
@@ -373,7 +374,7 @@ class FarCreater:
         time_begin = time_now_get()
         if not os.path.isfile(compress_path):
             status, output = getstatusoutput_s(cmd)
-            time_used = user_time_get(output)
+            time_used = real_time_get(output)
         time_end = time_now_get()
 
         task.compress_start_time = time_begin

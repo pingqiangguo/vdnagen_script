@@ -411,7 +411,7 @@ class FarMatcher:
             self.reporter.log_write(f"\tmatch asset_id: {task.asset_id[i]}")
             self.reporter.log_write(f"\tmatch sample offset: {task.sample_off[i]}")
             self.reporter.log_write(f"\tmatch reference offset: {task.ref_off[i]}")
-            self.reporter.log_write(f"\tmatch duration duration: {task.match_duration[i]}")
+            self.reporter.log_write(f"\tmatch duration: {task.match_duration[i]}")
             self.reporter.log_write(f"\tmatch likelihood: {task.likelihood[i]}")
 
     def __match_task_log_update(self):
