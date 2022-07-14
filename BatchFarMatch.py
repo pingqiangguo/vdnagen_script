@@ -16,6 +16,7 @@ import pandas as pd
 from common import far_is_video_far
 from common import far_video_duration_get
 from common import getstatusoutput_s
+from common import log_formatter_get
 from common import mediawise_stdout_get_json
 from common import real_time_get
 from common import sh2bash
@@ -59,7 +60,7 @@ class Reporter:
     def logger_create(self, logger_name: str = "batch_far_create_logger"):
         logg = logging.getLogger(logger_name)
         # 定义一个模板
-        FORMATTER = logging.Formatter("%(asctime)s - %(name)s - [%(lineno)d] - %(message)s")
+        FORMATTER = log_formatter_get()
 
         # 创建一个屏幕流
         p_stream = logging.StreamHandler()

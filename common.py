@@ -1,11 +1,16 @@
 # coding: utf-8
 import hashlib
+import logging
 import os
 import shlex
 import shutil
 import subprocess
 import time
 from typing import Tuple
+
+
+def log_formatter_get():
+    return logging.Formatter("[%(asctime)s][%(filename)s][line:%(lineno)d][%(levelname)s] - %(message)s")
 
 
 def symlink_real_path(path: str):
