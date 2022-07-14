@@ -2,6 +2,7 @@
 # coding: utf-8
 import argparse
 import json
+import logging
 import os
 import shlex
 import time
@@ -14,11 +15,11 @@ import pandas as pd
 
 from common import file_size_format
 from common import getstatusoutput_s
+from common import real_time_get
 from common import sh2bash
 from common import str_md5_get
 from common import time_now_get
 from common import user_time_get
-from common import real_time_get
 from common import video_duration_get
 
 # =================
@@ -67,6 +68,7 @@ class Reporter:
         self.__log_path_bkp = os.path.join(self.backup_dir, f"{time_start}-{log_filename}")
         if os.path.isfile(self.__log_path):
             os.remove(self.__log_path)
+        self.logger = self.logger_create()
 
         self.__path_report = os.path.join(os.getcwd(), path_report)
         self.__path_report_bkp = os.path.join(self.backup_dir, f"{time_start}-{path_report}")
@@ -76,15 +78,29 @@ class Reporter:
         self.__xlsx_export = os.path.join(os.getcwd(), xlsx_export)
         self.__xlsx_export_bkp = os.path.join(self.backup_dir, f"{time_start}-{xlsx_export}")
 
-    def log_write(self, msg: str) -> None:
+    def logger_create(self, logger_name: str = "batch_far_create_logger"):
+        logg = logging.getLogger(logger_name)
+        # 定义一个模板
+        FORMATTER = logging.Formatter("%(asctime)s - %(name)s - [%(lineno)d] - %(message)s")
+
+        # 创建一个屏幕流
+        p_stream = logging.StreamHandler()
+        # 创建一个文件流
+        f_stream = logging.FileHandler(self.__log_path, mode="a", encoding="utf-8")
+        f_stream_bkp = logging.FileHandler(self.__log_path_bkp, mode="a", encoding="utf-8")
+        p_stream.setFormatter(FORMATTER)
+        f_stream.setFormatter(FORMATTER)
+        f_stream_bkp.setFormatter(FORMATTER)
+        logg.addHandler(p_stream)
+        logg.addHandler(f_stream)
+        logg.addHandler(f_stream_bkp)
+        logg.setLevel(logging.DEBUG)
+        return logg
+
+    def log_write(self, msg: str, level=logging.DEBUG) -> None:
         """ 写入日志
         """
-        msg = f"[{time_now_get()}] {msg}"
-        print(msg)
-        with open(self.__log_path, mode="a", encoding="utf-8") as f:
-            f.write(msg + "\n")
-        with open(self.__log_path_bkp, mode="a", encoding="utf-8") as f:
-            f.write(msg + "\n")
+        self.logger.log(level, msg)
 
     def path_write(self, far_path: str) -> None:
         """ 记录生成的far文件路径
@@ -277,6 +293,9 @@ class FarCreater:
         media_path = os.path.abspath(media_path)
         far_path = os.path.abspath(far_path)
         if os.path.isfile(media_path):
+            if not vdnagen_rebuild and os.path.isfile(far_path):
+                self.__reporter.log_write(f"{media_path} {far_path} already exists")
+                return
             # 通过文件后缀名过滤
             meta = MediaInfo(media_path)
 
@@ -295,6 +314,7 @@ class FarCreater:
                     res.media_height = meta.height
                     res.media_codec = meta.codec
                     res.status = TaskStatus
+                    self.__reporter.log_write(f"{media_path} task add success.")
                     self.__tasks.append(res)
                 except Exception:
                     self.__reporter.log_write(f"{media_path} ffmpeg get meta info failed.")

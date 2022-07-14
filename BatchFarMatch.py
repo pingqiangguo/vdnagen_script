@@ -2,6 +2,7 @@
 # coding: utf-8
 import argparse
 import json
+import logging
 import os
 import shlex
 import time
@@ -15,12 +16,12 @@ import pandas as pd
 from common import far_is_video_far
 from common import far_video_duration_get
 from common import getstatusoutput_s
+from common import mediawise_stdout_get_json
 from common import real_time_get
 from common import sh2bash
-from common import mediawise_stdout_get_json
 from common import str_md5_get
-from common import time_now_get
 from common import symlink_real_path
+from common import time_now_get
 
 backup = os.path.join(os.getcwd(), "backup")
 log_filename = "batch_far_match.log"
@@ -28,9 +29,11 @@ far_path_report = "batch_far_match_far_path.txt"
 xlsx_export = "batch_far_match_report.xlsx"
 
 # 使用上次查询结果
-# vdnagen_rematch = False
+vdnagen_rematch = False
+
+
 # 重新查询
-vdnagen_rematch = True
+# vdnagen_rematch = True
 
 
 class Reporter:
@@ -43,6 +46,7 @@ class Reporter:
         self.__log_path_bkp = os.path.join(self.backup_dir, f"{time_start}-{log_filename}")
         if os.path.isfile(self.__log_path):
             os.remove(self.__log_path)
+        self.logger = self.logger_create()
 
         self.far_path_report = os.path.join(os.getcwd(), far_path_report)
         self.far_path_report_bkp = os.path.join(self.backup_dir, f"{time_start}-{far_path_report}")
@@ -52,23 +56,35 @@ class Reporter:
         self.__xlsx_export = os.path.join(os.getcwd(), xlsx_export)
         self.__xlsx_export_bkp = os.path.join(self.backup_dir, f"{time_start}-{xlsx_export}")
 
-    def log_write(self, msg: str) -> None:
+    def logger_create(self, logger_name: str = "batch_far_create_logger"):
+        logg = logging.getLogger(logger_name)
+        # 定义一个模板
+        FORMATTER = logging.Formatter("%(asctime)s - %(name)s - [%(lineno)d] - %(message)s")
+
+        # 创建一个屏幕流
+        p_stream = logging.StreamHandler()
+        # 创建一个文件流
+        f_stream = logging.FileHandler(self.__log_path, mode="a", encoding="utf-8")
+        f_stream_bkp = logging.FileHandler(self.__log_path_bkp, mode="a", encoding="utf-8")
+        p_stream.setFormatter(FORMATTER)
+        f_stream.setFormatter(FORMATTER)
+        f_stream_bkp.setFormatter(FORMATTER)
+        logg.addHandler(p_stream)
+        logg.addHandler(f_stream)
+        logg.addHandler(f_stream_bkp)
+        logg.setLevel(logging.DEBUG)
+        return logg
+
+    def log_write(self, msg: str, level=logging.DEBUG) -> None:
         """ 写入日志
         """
-        msg = f"[{time_now_get()}] {msg}"
-        print(msg)
-        with open(self.__log_path, mode="a", encoding="utf-8") as f:
-            f.write(msg + "\n")
-        with open(self.__log_path_bkp, mode="a", encoding="utf-8") as f:
-            f.write(msg + "\n")
+        self.logger.log(level, msg)
 
     def far_path_write(self, far_path: str) -> None:
         with open(self.far_path_report, mode="a", encoding="utf-8") as f:
             f.write(far_path + "\n")
         with open(self.far_path_report_bkp, mode="a", encoding="utf-8") as f:
             f.write(far_path + "\n")
-
-        pass
 
     def xlsx_write(self, df: pd.DataFrame) -> None:
         """ far生成报告导出
@@ -512,11 +528,11 @@ def main():
     args = parse_args()
 
     # 进程重复启动检测
-    import subprocess
-    proc = subprocess.Popen(["pgrep", "-f", __file__], stdout=subprocess.PIPE)
-    std = [p for p in proc.communicate() if p is not None]
-    if len(std[0].decode().split()) > 1:
-        exit('Already running')
+    # import subprocess
+    # proc = subprocess.Popen(["pgrep", "-f", __file__], stdout=subprocess.PIPE)
+    # std = [p for p in proc.communicate() if p is not None]
+    # if len(std[0].decode().split()) > 1:
+    #     exit('Already running')
 
     time_begin = time.time()
     batch_far_match(args.host, args.user, args.password, args.input, args.num_workers)
