@@ -16,6 +16,7 @@ import pandas as pd
 
 from common import far_is_video_far
 from common import far_video_duration_get
+from common import file_size_format
 from common import getstatusoutput_s
 from common import log_formatter_get
 from common import mediawise_stdout_get_json
@@ -413,7 +414,7 @@ class FarMatcher:
         else:
             return
         self.reporter.logger.info(f"far path: {task.far_path}")
-        self.reporter.logger.info(f"far size: {task.far_size}")
+        self.reporter.logger.info(f"far size: {file_size_format(task.far_size)}")
         self.reporter.logger.info(f"media duration: {task.media_duration}")
         self.reporter.logger.info(f"match command: {task.match_cmd}")
         self.reporter.logger.info(f"match status: {task.status}")
