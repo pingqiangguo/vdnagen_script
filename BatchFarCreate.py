@@ -97,7 +97,7 @@ class Reporter:
         logg.setLevel(logging.DEBUG)
         return logg
 
-    def log_write(self, msg: str, level=logging.DEBUG) -> None:
+    def log_write(self, msg: str, level: int = logging.DEBUG) -> None:
         """ 写入日志
         """
         self.logger.log(level, msg)
@@ -294,7 +294,7 @@ class FarCreater:
         far_path = os.path.abspath(far_path)
         if os.path.isfile(media_path):
             if not vdnagen_rebuild and os.path.isfile(far_path):
-                self.__reporter.log_write(f"{media_path} {far_path} already exists")
+                self.__reporter.logger.info(f"{media_path} {far_path} already exists")
                 return
             # 通过文件后缀名过滤
             meta = MediaInfo(media_path)
@@ -304,7 +304,7 @@ class FarCreater:
             res.far_path = far_path
             res.media_size = os.path.getsize(media_path)
             if meta.status != 0:
-                self.__reporter.log_write(f"{media_path} ffmpeg get meta info failed.")
+                self.__reporter.logger.warning(f"{media_path} ffmpeg get meta info failed.")
                 res.status = TaskStatus.parse_error
                 self.__tasks_init_error.append(res)
             else:
@@ -314,13 +314,13 @@ class FarCreater:
                     res.media_height = meta.height
                     res.media_codec = meta.codec
                     res.status = TaskStatus
-                    self.__reporter.log_write(f"{media_path} task add success.")
+                    self.__reporter.logger.info(f"{media_path} task add success.")
                     self.__tasks.append(res)
                 except Exception:
-                    self.__reporter.log_write(f"{media_path} ffmpeg get meta info failed.")
+                    self.__reporter.logger.warning(f"{media_path} ffmpeg get meta info failed.")
                     self.__tasks_init_error.append(res)
         else:
-            self.__reporter.log_write(f"{media_path} not exists.")
+            self.__reporter.logger.warning(f"{media_path} not exists.")
 
     def tasks_add_from_dir(self, media_dir: str, far_dir: str) -> None:
         """
@@ -602,28 +602,28 @@ class FarCreater:
         :return:
         """
         task = self.__tasks[task_id]  # 这就等于获得当面任务的执行结果
-        self.__reporter.log_write(f"media path: {task.media_path}")
-        self.__reporter.log_write(f"media size: {file_size_format(task.media_size)}")
-        self.__reporter.log_write(f"media shape: {task.media_width}x{task.media_height}")
-        self.__reporter.log_write(f"media codec: {task.media_codec}")
-        self.__reporter.log_write(f"media duration : {task.media_duration} sec")
+        self.__reporter.logger.info(f"media path: {task.media_path}")
+        self.__reporter.logger.info(f"media size: {file_size_format(task.media_size)}")
+        self.__reporter.logger.info(f"media shape: {task.media_width}x{task.media_height}")
+        self.__reporter.logger.info(f"media codec: {task.media_codec}")
+        self.__reporter.logger.info(f"media duration : {task.media_duration} sec")
         if os.path.isfile(task.compress_path):
-            self.__reporter.log_write(f"compress path: {task.compress_path}")
-            self.__reporter.log_write(f"compress size: {file_size_format(task.compress_size)}")
-        self.__reporter.log_write(f"far path: {task.far_path}")
-        self.__reporter.log_write(f"far size: {file_size_format(task.far_size)}")
-        self.__reporter.log_write(f"vdnagen command: {task.vdg_cmd}")
-        self.__reporter.log_write(f"vdnagen start time: {task.vdg_start_time}")
-        self.__reporter.log_write(f"vdnagen end time: {task.vdg_end_time}")
-        self.__reporter.log_write(f"vdnagen time used {task.vdg_time_used} sec")
-        self.__reporter.log_write("done.")
+            self.__reporter.logger.info(f"compress path: {task.compress_path}")
+            self.__reporter.logger.info(f"compress size: {file_size_format(task.compress_size)}")
+        self.__reporter.logger.info(f"far path: {task.far_path}")
+        self.__reporter.logger.info(f"far size: {file_size_format(task.far_size)}")
+        self.__reporter.logger.info(f"vdnagen command: {task.vdg_cmd}")
+        self.__reporter.logger.info(f"vdnagen start time: {task.vdg_start_time}")
+        self.__reporter.logger.info(f"vdnagen end time: {task.vdg_end_time}")
+        self.__reporter.logger.info(f"vdnagen time used {task.vdg_time_used} sec")
+        self.__reporter.logger.info("done.")
 
     def __vdg_tasks_log_update(self):
         """ VDNAGen 日志更新
         打印新完成的任务日志
         """
         for i in range(len(self.__vdg_tasks_done) - self.__vdg_tasks_done_tr):
-            self.__reporter.log_write(
+            self.__reporter.logger.info(
                 f"=============== Success VDNAGen task {self.__vdg_tasks_done_tr + i + 1} ===============")
             task_id = self.__vdg_tasks_done[self.__vdg_tasks_done_tr + i]
             self.__vdg_task_log_update_op(task_id)
@@ -631,7 +631,7 @@ class FarCreater:
         self.__vdg_tasks_done_tr = len(self.__vdg_tasks_done)
 
         for i in range(len(self.__vdg_tasks_error) - self.__vdg_tasks_error_tr):
-            self.__reporter.log_write(
+            self.__reporter.logger.warning(
                 f"=============== Error VDNAGen task {self.__vdg_tasks_error_tr + i + 1} ===============")
             task_id = self.__vdg_tasks_error[self.__vdg_tasks_error_tr + i]
             self.__vdg_task_log_update_op(task_id)
@@ -643,33 +643,33 @@ class FarCreater:
         :return:
         """
         task: Task = self.__tasks[task_id]  # 这就等于获得当面任务的执行结果
-        self.__reporter.log_write(f"media path: {task.media_path}")
-        self.__reporter.log_write(f"media size: {file_size_format(task.media_size)}")
-        self.__reporter.log_write(f"media shape: {task.media_width}x{task.media_height}")
-        self.__reporter.log_write(f"media codec: {task.media_codec}")
-        self.__reporter.log_write(f"media duration : {task.media_duration} sec")
+        self.__reporter.logger.info(f"media path: {task.media_path}")
+        self.__reporter.logger.info(f"media size: {file_size_format(task.media_size)}")
+        self.__reporter.logger.info(f"media shape: {task.media_width}x{task.media_height}")
+        self.__reporter.logger.info(f"media codec: {task.media_codec}")
+        self.__reporter.logger.info(f"media duration : {task.media_duration} sec")
         if os.path.isfile(task.compress_path):
-            self.__reporter.log_write(f"compress path: {task.compress_path}")
-            self.__reporter.log_write(f"compress size: {file_size_format(task.compress_size)}")
-        self.__reporter.log_write(f"compress command: {task.compress_cmd}")
-        self.__reporter.log_write(f"compress start time: {task.compress_start_time}")
-        self.__reporter.log_write(f"compress end time: {task.compress_end_time}")
-        self.__reporter.log_write(f"compress time used {task.compress_time_used} sec")
+            self.__reporter.logger.info(f"compress path: {task.compress_path}")
+            self.__reporter.logger.info(f"compress size: {file_size_format(task.compress_size)}")
+        self.__reporter.logger.info(f"compress command: {task.compress_cmd}")
+        self.__reporter.logger.info(f"compress start time: {task.compress_start_time}")
+        self.__reporter.logger.info(f"compress end time: {task.compress_end_time}")
+        self.__reporter.logger.info(f"compress time used {task.compress_time_used} sec")
         gpu_id = task.fpg_gpu_id
         device = "Error Device"
         if gpu_id == -1:
             device = "CPU"
         elif gpu_id >= 0:
             device = f"GPU:{gpu_id}"
-        self.__reporter.log_write(f"ffmpeg use device: {device}")
-        self.__reporter.log_write("done.")
+        self.__reporter.logger.info(f"ffmpeg use device: {device}")
+        self.__reporter.logger.info("done.")
 
     def __fpg_tasks_log_update(self):
         """ ffmpeg 视频压缩日志更新
         打印新完成的任务日志
         """
         for i in range(len(self.__fpg_tasks_done) - self.__fpg_tasks_done_tr):
-            self.__reporter.log_write(
+            self.__reporter.logger.info(
                 f"=============== Success ffmpeg task {self.__fpg_tasks_done_tr + i + 1} ===============")
             task_id = self.__fpg_tasks_done[self.__fpg_tasks_done_tr + i]
             self.__fpg_log_update_op(task_id)
@@ -677,7 +677,7 @@ class FarCreater:
 
         for i in range(len(self.__fpg_tasks_error) - self.__fpg_tasks_error_tr):
             task_id = self.__fpg_tasks_error[self.__fpg_tasks_error_tr + i]
-            self.__reporter.log_write(
+            self.__reporter.logger.warning(
                 f"=============== Error ffmpeg task {self.__fpg_tasks_error_tr + i + 1} ===============")
             self.__fpg_log_update_op(task_id)
         self.__fpg_tasks_error_tr = len(self.__fpg_tasks_error)
@@ -750,8 +750,8 @@ class FarCreater:
 
         # self.__tasks = self.__tasks[:3]
         self.__tasks_init()
-        self.__reporter.log_write(f"start {self.__num_workers} thread to running {len(self.__tasks)} task...")
-        self.__reporter.log_write(f"{len(self.__fpg_tasks_wait)} tasks need to compressed.")
+        self.__reporter.logger.info(f"start {self.__num_workers} thread to running {len(self.__tasks)} task...")
+        self.__reporter.logger.info(f"{len(self.__fpg_tasks_wait)} tasks need to compressed.")
 
         while len(self.__vdg_tasks_wait) + \
                 len(self.__fpg_tasks_running) + \
@@ -762,7 +762,7 @@ class FarCreater:
             self.__vdg_tasks_queue_update()
             self.__vdg_tasks_log_update()
             time.sleep(1)
-        self.__reporter.log_write(f"{self.__num_workers} thread to running {len(self.__tasks)} task done.")
+        self.__reporter.logger.info(f"{self.__num_workers} thread to running {len(self.__tasks)} task done.")
         self.__tasks_report_export()
 
 

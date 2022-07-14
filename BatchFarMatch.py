@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import shlex
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
@@ -210,21 +211,21 @@ class FarMatcher:
                 cache_dir = os.path.join(self.match_cache, str_md5_get(far_path.encode("utf-8")))
                 os.makedirs(cache_dir, exist_ok=True)
                 if far_is_video_far(far_path, cache_dir):
-                    self.reporter.log_write(f"{far_path} task add success")
+                    self.reporter.logger.info(f"{far_path} task add success")
                     self.reporter.far_path_write(far_path)
                     task.media_duration = far_video_duration_get(far_path, cache_dir)
                     task.status = TaskStatus.task_create
                     self.__tasks.append(task)
                 else:
-                    self.reporter.log_write(f"{far_path} not support.")
+                    self.reporter.logger.warning(f"{far_path} not support.")
                     task.status = TaskStatus.no_need_match
                     self.__tasks_init_error.append(task)
             except:
-                self.reporter.log_write(f"{far_path} parse error.")
+                self.reporter.logger.warning(f"{far_path} parse error.")
                 task.status = TaskStatus.parse_error
                 self.__tasks_init_error.append(task)
         else:
-            self.reporter.log_write(f"{far_path} not found or suffix error, ignored.")
+            self.reporter.logger.warning(f"{far_path} not found or suffix error, ignored.")
 
     def tasks_add_from_dir(self, far_dir: str) -> None:
         for sub in os.listdir(far_dir):
@@ -238,7 +239,8 @@ class FarMatcher:
 
     def tasks_add_from_file(self, file: str):
         if not os.path.isfile(file):
-            self.reporter.log_write(f"{file} not found.")
+            self.reporter.logger.error(f"{file} not found.")
+            sys.exit(-1)
         with open(file, mode="r", encoding="utf-8") as f:
             for far_path in f.readlines():
                 far_path = far_path.strip()
@@ -410,37 +412,37 @@ class FarMatcher:
             task: Task = self.__tasks[task_id]
         else:
             return
-        self.reporter.log_write(f"far path: {task.far_path}")
-        self.reporter.log_write(f"far size: {task.far_size}")
-        self.reporter.log_write(f"media duration: {task.media_duration}")
-        self.reporter.log_write(f"match command: {task.match_cmd}")
-        self.reporter.log_write(f"match status: {task.status}")
-        self.reporter.log_write(f"match start time: {task.match_start_time}")
-        self.reporter.log_write(f"match end time: {task.match_end_time}")
-        self.reporter.log_write(f"match time used: {task.match_time_used}")
-        self.reporter.log_write(f"match task id: {task.task_id}")
-        self.reporter.log_write(f"match result count: {task.match_count}")
+        self.reporter.logger.info(f"far path: {task.far_path}")
+        self.reporter.logger.info(f"far size: {task.far_size}")
+        self.reporter.logger.info(f"media duration: {task.media_duration}")
+        self.reporter.logger.info(f"match command: {task.match_cmd}")
+        self.reporter.logger.info(f"match status: {task.status}")
+        self.reporter.logger.info(f"match start time: {task.match_start_time}")
+        self.reporter.logger.info(f"match end time: {task.match_end_time}")
+        self.reporter.logger.info(f"match time used: {task.match_time_used}")
+        self.reporter.logger.info(f"match task id: {task.task_id}")
+        self.reporter.logger.info(f"match result count: {task.match_count}")
         if task.match_count <= 0:
             return
         for i in range(task.match_count):
-            self.reporter.log_write(f"match result {i + 1}:")
-            self.reporter.log_write(f"\tmatch title: {task.title[i]}")
-            self.reporter.log_write(f"\tmatch asset_id: {task.asset_id[i]}")
-            self.reporter.log_write(f"\tmatch sample offset: {task.sample_off[i]}")
-            self.reporter.log_write(f"\tmatch reference offset: {task.ref_off[i]}")
-            self.reporter.log_write(f"\tmatch duration: {task.match_duration[i]}")
-            self.reporter.log_write(f"\tmatch likelihood: {task.likelihood[i]}")
+            self.reporter.logger.info(f"match result {i + 1}:")
+            self.reporter.logger.info(f"\tmatch title: {task.title[i]}")
+            self.reporter.logger.info(f"\tmatch asset_id: {task.asset_id[i]}")
+            self.reporter.logger.info(f"\tmatch sample offset: {task.sample_off[i]}")
+            self.reporter.logger.info(f"\tmatch reference offset: {task.ref_off[i]}")
+            self.reporter.logger.info(f"\tmatch duration: {task.match_duration[i]}")
+            self.reporter.logger.info(f"\tmatch likelihood: {task.likelihood[i]}")
 
     def __match_task_log_update(self):
         for i in range(len(self.__match_tasks_done) - self.__match_tasks_done_tr):
-            self.reporter.log_write(
+            self.reporter.logger.info(
                 f"=============== Success Match task {self.__match_tasks_done_tr + i + 1} ===============")
             task_id = self.__match_tasks_done[self.__match_tasks_done_tr + i]
             self.__match_task_log_update_op(task_id)
 
         self.__match_tasks_done_tr = len(self.__match_tasks_done)
         for i in range(len(self.__match_tasks_error) - self.__match_tasks_error_tr):
-            self.reporter.log_write(
+            self.reporter.logger.warning(
                 f"=============== Error Match task {self.__match_tasks_error_tr + i + 1} ===============")
             task_id = self.__match_tasks_error[self.__match_tasks_error_tr + i]
             self.__match_task_log_update_op(task_id)
@@ -497,13 +499,13 @@ class FarMatcher:
 
     def tasks_run(self):
         self.__tasks_init()
-        self.reporter.log_write(f"start {self.__num_workers} thread to running {len(self.__tasks)} task...")
+        self.reporter.logger.info(f"start {self.__num_workers} thread to running {len(self.__tasks)} task...")
         while len(self.__match_tasks_wait) + len(self.__match_tasks_running) > 0:
             self.__match_tasks_queue_update()
             self.__match_task_log_update()
             time.sleep(1)
         self.__tasks_report_export()
-        self.reporter.log_write(f"{self.__num_workers} thread to running {len(self.__tasks)} task done.")
+        self.reporter.logger.info(f"{self.__num_workers} thread to running {len(self.__tasks)} task done.")
 
 
 def batch_far_match(host: str, user: str, passwd: str, input: str, num_workers: int):
